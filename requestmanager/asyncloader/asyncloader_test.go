@@ -27,6 +27,9 @@ func TestAsyncLoadInitialLoadSucceedsLocallyPresent(t *testing.T) {
 	loader, storer := testbridge.NewMockStore(blockStore)
 	block := testutil.GenerateBlocksOfSize(1, 100)[0]
 	writer, commit, err := storer(ipldbridge.LinkContext{})
+	if err != nil {
+		t.Fatal("error when calling storer")
+	}
 	_, err = writer.Write(block.RawData())
 	if err != nil {
 		t.Fatal("could not seed block store")

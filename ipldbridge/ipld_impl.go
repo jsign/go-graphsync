@@ -9,12 +9,11 @@ import (
 	"github.com/ipld/go-ipld-prime/encoding/dagcbor"
 	free "github.com/ipld/go-ipld-prime/impl/free"
 	"github.com/ipld/go-ipld-prime/traversal"
-	ipldtraversal "github.com/ipld/go-ipld-prime/traversal"
 	ipldselector "github.com/ipld/go-ipld-prime/traversal/selector"
 )
 
 // TraversalConfig is an alias from ipld, in case it's renamed/moved.
-type TraversalConfig = ipldtraversal.Config
+type TraversalConfig = traversal.Config
 
 type ipldBridge struct {
 }
@@ -46,7 +45,7 @@ func (rb *ipldBridge) Traverse(ctx context.Context, loader Loader, root ipld.Lin
 }
 
 func (rb *ipldBridge) WalkMatching(node ipld.Node, s Selector, fn VisitFn) error {
-	return ipldtraversal.WalkMatching(node, s, fn)
+	return traversal.WalkMatching(node, s, fn)
 }
 
 func (rb *ipldBridge) EncodeNode(node ipld.Node) ([]byte, error) {

@@ -14,7 +14,6 @@ import (
 )
 
 var blockGenerator = blocksutil.NewBlockGenerator()
-var prioritySeq int
 var seedSeq int64
 
 // RandomBytes returns a byte array of the given size with random values.
