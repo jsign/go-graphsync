@@ -65,7 +65,7 @@ func (mq *MessageQueue) AddRequest(graphSyncRequest gsmsg.GraphSyncRequest) {
 // returns a channel that sends a notification when sending initiates. If ignored by the consumer
 // sending will not block.
 func (mq *MessageQueue) AddResponses(responses []gsmsg.GraphSyncResponse, blks []blocks.Block) <-chan struct{} {
-	notificationChannel := make(chan struct{}, 1)
+	notificationChannel := make(chan struct{})
 	if mq.mutateNextMessage(func(nextMessage gsmsg.GraphSyncMessage) {
 		for _, response := range responses {
 			nextMessage.AddResponse(response)
@@ -97,12 +97,16 @@ func (mq *MessageQueue) runQueue() {
 			mq.sendMessage()
 		case <-mq.done:
 			if mq.sender != nil {
-				mq.sender.Close()
+				if err := mq.sender.Close(); err != nil {
+					log.Errorf("error when closing sender: %s", err)
+				}
 			}
 			return
 		case <-mq.ctx.Done():
 			if mq.sender != nil {
-				mq.sender.Reset()
+				if err := mq.sender.Reset(); err != nil {
+					log.Errorf("error when reseting sender: %s", err)
+				}
 			}
 			return
 		}
@@ -135,10 +139,6 @@ func (mq *MessageQueue) extractOutgoingMessage() gsmsg.GraphSyncMessage {
 	message := mq.nextMessage
 	mq.nextMessage = nil
 	for _, processedNotifier := range mq.processedNotifiers {
-		select {
-		case processedNotifier <- struct{}{}:
-		default:
-		}
 		close(processedNotifier)
 	}
 	mq.processedNotifiers = nil
@@ -152,8 +152,7 @@ func (mq *MessageQueue) sendMessage() {
 		return
 	}
 
-	err := mq.initializeSender()
-	if err != nil {
+	if err := mq.initializeSender(); err != nil {
 		log.Infof("cant open message sender to peer %s: %s", mq.p, err)
 		// TODO: cant connect, what now?
 		return
@@ -198,8 +197,7 @@ func (mq *MessageQueue) attemptSendAndRecovery(message gsmsg.GraphSyncMessage) b
 		log.Warning("SendMsg errored but neither 'done' nor context.Done() were set")
 	}
 
-	err = mq.initializeSender()
-	if err != nil {
+	if err = mq.initializeSender(); err != nil {
 		log.Infof("couldnt open sender again after SendMsg(%s) failed: %s", mq.p, err)
 		// TODO(why): what do we do now?
 		// I think the *right* answer is to probably put the message we're
@@ -217,8 +215,7 @@ func openSender(ctx context.Context, network MessageNetwork, p peer.ID) (gsnet.M
 	conctx, cancel := context.WithTimeout(ctx, time.Minute*10)
 	defer cancel()
 
-	err := network.ConnectTo(conctx, p)
-	if err != nil {
+	if err := network.ConnectTo(conctx, p); err != nil {
 		return nil, err
 	}
 
